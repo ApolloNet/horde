@@ -65,19 +65,19 @@ function make_player(x,y)
     is_behind_a_block=false,
     walk_counter=0,
     walk_sprites=4,
-    walk_sprites_first=2,
     sprite=1,
+
     -- update velocity
-    update_velocity=function(self)
+    update_move=function(self)
       -- apply friction
       self.velocity_x*=0.2
       self.velocity_y*=0.2
       -- move the player with the arrow keys
-      if btn(1) then
-        self.velocity_x=self.move_speed
-      end
       if btn(0) then
         self.velocity_x=-self.move_speed
+      end
+      if btn(1) then
+        self.velocity_x=self.move_speed
       end
       if btn(2) then
         self.velocity_y=-self.move_speed
@@ -85,16 +85,41 @@ function make_player(x,y)
       if btn(3) then
         self.velocity_y=self.move_speed
       end
-      -- jump when z is pressed
+      -- z button
       if btn(4) and self.is_standing_on_block then
-        --self.velocity_y=-3
+        
       end
       -- apply wind
-      self.velocity_x-=wind(self.x,self.y,self.is_behind_a_block)
+      local w = wind(self.x,self.y,self.is_behind_a_block)
+      self.velocity_x-=w.x
+      self.velocity_y-=w.y
       -- make sure the velocity doesn't get too big
       self.velocity_x=mid(-3,self.velocity_x,3)
       self.velocity_y=mid(-3,self.velocity_y,3)
     end,
+
+    -- update wind
+    update_wind=function(self)
+      local wind={
+        x=0,
+        y=0
+      }
+      -- little random wind
+      wind.x+=rnd(1)
+      wind.y+=rnd(2)-1
+      -- standing on a block
+      if self.is_standing_on_block then
+        --to something
+      end
+      -- behind a block
+      if self.is_behind_a_block then
+        --to something
+      end
+      -- apply wind
+      self.velocity_x-=wind.x
+      self.velocity_y-=wind.y
+    end,
+
     -- update walk counter
     update_walk_counter=function(self)
       if self.walk_counter==self.walk_sprites*8 then
@@ -103,14 +128,17 @@ function make_player(x,y)
         self.walk_counter+=1
       end
     end,
+    
     -- update sprite
     update_sprite=function(self)
+      local walk_sprites_first=2
       self.sprite=mid(
-        self.walk_sprites_first,
+        walk_sprites_first,
         flr(self.walk_counter/8)+1,
-        self.walk_sprites+self.walk_sprites_first
+        self.walk_sprites+walk_sprites_first
       )
     end,
+
     -- update object collision
     update_object_collision=function(self)
       for_each_game_object("coin",function(coin)
@@ -120,6 +148,7 @@ function make_player(x,y)
         end
       end)
     end,
+
     -- update block collision
     update_block_collision=function(self)
       self.is_standing_on_block=false
@@ -139,9 +168,11 @@ function make_player(x,y)
         end
       end)
     end,
+
     -- global update
     update=function(self)
-      self:update_velocity()
+      self:update_move()
+      self:update_wind()
       self:update_object_collision()
       self:update_block_collision()
       self:update_walk_counter()
@@ -150,6 +181,7 @@ function make_player(x,y)
       self.x+=self.velocity_x
       self.y+=self.velocity_y
     end,
+
     -- draw
     draw=function(self)
       spr(self.sprite,self.x,self.y)
@@ -164,12 +196,16 @@ end
 -- get wind for the 8x8 cell cx,cy
 -- todo: return x and y
 function wind(cx,cy,behind)
-  local wind=0
+  local wind={
+    x=0,
+    y=0
+  }
   -- a little one
-  wind+=rnd(rnd(20))/10
+  wind.x+=rnd(rnd(20))/10
+  wind.y+=rnd(rnd(20))/10
   -- behind a block
   if behind then
-    wind=0
+    --wind=0
   end
   -- return wind
   return wind
@@ -188,7 +224,7 @@ end
 
 -- make some blocks
 function make_blocks()
-  local num=48
+  local num=64
   local sprites=11
   i=0
   while i<num do
@@ -340,14 +376,14 @@ __gfx__
 000000000000000000000000000000e000ee00000000000000000000ee0000ee00000000000000000000000000000000000000004bccccccccccccccccccccc9
 00000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000004cccccccccccccccccccccc9
 0000000000000000ee0000000000000000000000000000000eee00000000000000000000000000000000000000000000000000004cccccccccccccccccccccc9
-0003b3b00005700000ffff0000000000fff0000000666600000000006660000000777700000000007770000000000000000000004ccbccccccccccccccccccc9
-0b39333b005567700ffffff0000ff000fff0ffff06666660000660006660666607777770000770007770777700000000000000004bbbbccbccccccccccccccc9
-bb43bb3300555500fffffff000fff9004494ffff6666666000666500115166667777777000777600dd6d7777000000000000000044bbbccccccccccccccbbcc9
-b444343b05557000fffff9900ffff9904ff4ffff66666110066665501661666677777dd007777660d77d77770000000000000000444bbbcccccccccccbb8bbc9
-0b344339055567774fff94ffffff49999ff999995666156666661555566555556777d6777777d66667766666000000000000000044444bcccccbccccccbbbcc9
-343b434405555500944494ffff44449999999944155515666611115555555511d666d67777dddd66666666dd000000000000000044444bcccbbbbccbcccccc99
-0443434b5555777099499444f449444999449444115115556115111555115111dd6dd6667dd6ddd666dd6ddd00000000000000000444444b9999999999990900
-094444bb555555000949994044444444444444400151115011111111111111100d6ddd60ddddddddddddddd00000000000000000004444444444444444444000
+0003b3b00003b3b000ffff0000000000fff0000000666600000000006660000000777700000000007770000000000000000000004ccbccccccccccccccccccc9
+0b39333b0b32333b0ffffff0000ff000fff0ffff06666660000660006660666607777770000770007770777700000000000000004bbbbccbccccccccccccccc9
+bb43bb33bb43bb33fffffff000fff9004494ffff6666666000666500115166667777777000777600dd6d7777000000000000000044bbbccccccccccccccbbcc9
+b444343bb444383bfffff9900ffff9904ff4ffff66666110066665501661666677777dd007777660d77d77770000000000000000444bbbcccccccccccbb8bbc9
+0b344339083443324fff94ffffff49999ff999995666156666661555566555556777d6777777d66667766666000000000000000044444bcccccbccccccbbbcc9
+343b434434374344944494ffff44449999999944155515666611115555555511d666d67777dddd66666666dd000000000000000044444bcccbbbbccbcccccc99
+0443434b0443434b99499444f449444999449444115115556115111555115111dd6dd6667dd6ddd666dd6ddd00000000000000000444444b9999999999990900
+094444bb094444bb0949994044444444444444400151115011111111111111100d6ddd60ddddddddddddddd00000000000000000004444444444444444444000
 92222229000999004ffffff90ffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 a444444a0114449094ffff9f9ffffff9066677700999aaa000800000000000000000000000000000000000000000000000000000000000000000000000000000
 a4aaaa4a14444449994ff9ff9ffffff906111170092222a000080000000000000000000000000000000000000000000000000000000000000000000000000000
