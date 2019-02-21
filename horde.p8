@@ -5,14 +5,17 @@ __lua__
 -- orignal code from @bridgs_dev@twitter.com
 -- https://github.com/bridgs/pico-8-for-beginners/
 
+-- variables
 local game_objects
 
+-- main init
 function _init()
   game_objects={}
   make_player(64,24)
   make_blocks()
 end
 
+-- main update
 function _update()
   srand(12)
   -- update all the game objects
@@ -22,10 +25,11 @@ function _update()
   end
 end
 
+-- main draw
 function _draw()
   draw_landscape(16,16,'sand')
   -- draw a lake
-  draw_lake(32,32,4,3)
+  --draw_lake(32,32,4,3)
   -- draw all the game objects
   local obj
   for obj in all(game_objects) do
@@ -58,8 +62,6 @@ end
 -- game object creation functions
 function make_player(x,y)
   return make_game_object("player",x,y,{
-    width=8,
-    height=8,
     move_speed=1,
     is_standing_on_block=false,
     is_behind_a_block=false,
@@ -85,17 +87,6 @@ function make_player(x,y)
       if btn(3) then
         self.velocity_y=self.move_speed
       end
-      -- z button
-      if btn(4) and self.is_standing_on_block then
-        
-      end
-      -- apply wind
-      local w = wind(self.x,self.y,self.is_behind_a_block)
-      self.velocity_x-=w.x
-      self.velocity_y-=w.y
-      -- make sure the velocity doesn't get too big
-      self.velocity_x=mid(-3,self.velocity_x,3)
-      self.velocity_y=mid(-3,self.velocity_y,3)
     end,
 
     -- update wind
@@ -105,7 +96,7 @@ function make_player(x,y)
         y=0
       }
       -- little random wind
-      wind.x+=rnd(1)
+      wind.x+=rnd(1)-0.5
       wind.y+=rnd(2)-1
       -- standing on a block
       if self.is_standing_on_block then
@@ -169,6 +160,33 @@ function make_player(x,y)
       end)
     end,
 
+    -- update velocity
+    update_velocity=function(self)
+      self.x+=self.velocity_x
+      if self.x<=0 then
+        self.x=0
+      end
+      self.y+=self.velocity_y
+      if self.y<=0 then
+        self.y=0
+      end
+      if self.y+self.height>=128 then
+        self.y=128-self.height
+      end
+    end,
+
+    -- update camera
+    update_camera=function(self)
+      local cam={
+        x=self.x-64,
+        y=0
+      }
+      if cam.x<=0 then
+        cam.x=0
+      end
+      camera(cam.x,cam.y)
+    end,
+
     -- global update
     update=function(self)
       self:update_move()
@@ -177,9 +195,8 @@ function make_player(x,y)
       self:update_block_collision()
       self:update_walk_counter()
       self:update_sprite()
-      -- apply the velocity
-      self.x+=self.velocity_x
-      self.y+=self.velocity_y
+      self:update_velocity()
+      self:update_camera()
     end,
 
     -- draw
@@ -187,7 +204,7 @@ function make_player(x,y)
       spr(self.sprite,self.x,self.y)
       -- game over
       if self.x<=0 then
-        print("game over",5,5,7)
+        print("game over",5,5,8)
       end
     end
   })
@@ -214,8 +231,6 @@ end
 -- make a block
 function make_block(sprite,x,y)
   return make_game_object("block",x,y,{
-    width=8,
-    height=8,
     draw=function(self)
       spr(sprite,self.x,self.y)
     end
@@ -272,6 +287,8 @@ function make_game_object(name,x,y,props)
     y=y,
     velocity_x=0,
     velocity_y=0,
+    width=8,
+    height=8,
     update=function(self)
       -- do nothing
     end,
