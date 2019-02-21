@@ -7,12 +7,16 @@ __lua__
 
 -- variables
 local game_objects
+local level={
+  width=64,
+  height=16
+}
 
 -- main init
 function _init()
   game_objects={}
-  make_player(64,24)
-  make_blocks()
+  make_player(16,64)
+  make_blocks(level.width,level.height,256)
 end
 
 -- main update
@@ -27,7 +31,7 @@ end
 
 -- main draw
 function _draw()
-  draw_landscape(16,16,'sand')
+  draw_landscape(level.width,level.height,'sand')
   -- draw a lake
   --draw_lake(32,32,4,3)
   -- draw all the game objects
@@ -238,13 +242,12 @@ function make_block(sprite,x,y)
 end
 
 -- make some blocks
-function make_blocks()
-  local num=64
+function make_blocks(width,height,num)
   local sprites=11
   i=0
   while i<num do
-    local x=flr(rnd(16))*8
-    local y=flr(rnd(16))*8
+    local x=flr(rnd(width))*8
+    local y=flr(rnd(height))*8
     local sprite=rnd(sprites)+32
     make_block(sprite,x,y)
     i+=1
