@@ -6,22 +6,25 @@ __lua__
 -- https://github.com/bridgs/pico-8-for-beginners/
 
 -- variables
-local game_objects
 local level={
   width=64,
   height=16
 }
+local game_objects
+local wind
 
 -- main init
 function _init()
   game_objects={}
-  make_player(16,64)
   make_blocks(level.width,level.height,256)
+  wind:init()
+  make_player(32,64)
 end
 
 -- main update
 function _update()
-  srand(12)
+  -- update wind
+  wind:update()
   -- update all the game objects
   local obj
   for obj in all(game_objects) do
@@ -31,14 +34,15 @@ end
 
 -- main draw
 function _draw()
+  -- draw landscape
   draw_landscape(level.width,level.height,'sand')
-  -- draw a lake
-  --draw_lake(32,32,4,3)
   -- draw all the game objects
   local obj
   for obj in all(game_objects) do
     obj:draw()
   end
+  -- draw wind
+  wind:draw()
 end
 
 -- draw landscape
@@ -56,17 +60,19 @@ function draw_landscape(width,height,current)
     while y<height do
       local sprite=flr(rnd(8))+16
       pal(14,ls.color)
-      spr(sprite,x*8,y*8)
+      --spr(sprite,x*8,y*8)
       y+=1
     end
     x+=1
   end
+  -- draw a lake
+  --draw_lake(rnd(width),rnd(height),rnd(10),rnd(10))
 end
 
 -- game object creation functions
 function make_player(x,y)
   return make_game_object("player",x,y,{
-    move_speed=1,
+    force=1,
     is_standing_on_block=false,
     is_behind_a_block=false,
     walk_counter=0,
@@ -80,37 +86,21 @@ function make_player(x,y)
       self.velocity_y*=0.2
       -- move the player with the arrow keys
       if btn(0) then
-        self.velocity_x=-self.move_speed
+        self.velocity_x=-self.force
       end
       if btn(1) then
-        self.velocity_x=self.move_speed
+        self.velocity_x=self.force
       end
       if btn(2) then
-        self.velocity_y=-self.move_speed
+        self.velocity_y=-self.force
       end
       if btn(3) then
-        self.velocity_y=self.move_speed
+        self.velocity_y=self.force
       end
     end,
 
     -- update wind
     update_wind=function(self)
-      local wind={
-        x=0,
-        y=0
-      }
-      -- little random wind
-      wind.x+=rnd(1)-0.5
-      wind.y+=rnd(2)-1
-      -- standing on a block
-      if self.is_standing_on_block then
-        --to something
-      end
-      -- behind a block
-      if self.is_behind_a_block then
-        --to something
-      end
-      -- apply wind
       self.velocity_x-=wind.x
       self.velocity_y-=wind.y
     end,
@@ -205,31 +195,15 @@ function make_player(x,y)
 
     -- draw
     draw=function(self)
+      local camera=get_camera()
       spr(self.sprite,self.x,self.y)
+      print('force '..(self.force*100),camera.x+4,camera.y+4,8)
       -- game over
       if self.x<=0 then
         print("game over",5,5,8)
       end
     end
   })
-end
-
--- get wind for the 8x8 cell cx,cy
--- todo: return x and y
-function wind(cx,cy,behind)
-  local wind={
-    x=0,
-    y=0
-  }
-  -- a little one
-  wind.x+=rnd(rnd(20))/10
-  wind.y+=rnd(rnd(20))/10
-  -- behind a block
-  if behind then
-    --wind=0
-  end
-  -- return wind
-  return wind
 end
 
 -- make a block
@@ -358,6 +332,65 @@ function make_game_object(name,x,y,props)
   return obj
 end
 
+-- make wind
+wind={
+  init=function(self)
+    self.x=0
+    self.y=0
+    self.pixels={}
+    self.loop=0
+    self.loop_max=60
+  end,
+
+  update=function(self)
+    -- little random wind
+    if self.loop==self.loop_max then
+      self.loop=0
+      --todo : randomize
+      self.loop_max=60
+    end
+    if self.loop==0 then
+      self.x=mid(0.5,rnd(1),1)
+      self.y=rnd(2)-1
+    end
+    self.loop+=1
+    -- update pixels
+    self:update_pixels()
+  end,
+
+  update_pixels=function(self)
+    local camera=get_camera()
+    local wind_colors={7,9}
+    local num=self.x
+    local i=0
+    while i<num do
+      local pixel={
+        x=rnd(128)+camera.x,
+        y=rnd(128)+camera.y,
+        dir_x=self.x,
+        dir_y=self.y,
+        color=wind_colors[flr(rnd(#wind_colors))+1],
+        life=60
+      }
+      add(self.pixels,pixel)
+      i+=1
+    end
+  end,
+  
+  draw=function(self)
+    for k,pix in pairs(self.pixels) do
+      pix.x-=pix.dir_x
+      pix.y-=pix.dir_y
+      pix.life-=1
+      pset(pix.x,pix.y,pix.color)
+      if pix.life<=0 then
+        del(self.pixels,pix)
+      else
+        self.pixels[k]=pix
+      end
+    end
+  end
+}
 
 -- hit detection helper functions
 function rects_overlapping(left1,top1,right1,bottom1,left2,top2,right2,bottom2)
@@ -376,6 +409,14 @@ function for_each_game_object(name,callback)
       callback(obj)
     end
   end
+end
+
+-- get camera offset
+function get_camera()
+  return {
+    x=peek(0x5f28)+peek(0x5f29)*256,
+    y=peek(0x5f2a)+peek(0x5f2b)*256
+  }
 end
 
 
